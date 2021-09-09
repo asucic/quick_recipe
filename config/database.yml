@@ -1,0 +1,19 @@
+default: &default
+  adapter: mysql2
+  encoding: utf8mb4
+  pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
+  username: <%= ENV.fetch("DATABASE_USERNAME") %>
+  password: <%= ENV.fetch("DATABASE_PASSWORD") %>
+  host: localhost
+
+development:
+  <<: *default
+  database: quick_recipe_development
+
+test:
+  <<: *default
+  database: quick_recipe_test
+
+production:
+  <<: *default
+  database: quick_recipe_production
