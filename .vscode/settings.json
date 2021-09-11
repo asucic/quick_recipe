@@ -1,0 +1,18 @@
+{
+  "sqltools.connections": [
+    {
+      "mysqlOptions": {
+        "authProtocol": "default"
+      },
+      "previewLimit": 50,
+      "server": "172.21.128.15",
+      "port": 3306,
+      "driver": "MySQL",
+      "name": "antonio@wsl",
+      "username": "antonio",
+      "password": "zhe64Ktu:",
+      "database": "quick_recipe_development",
+      "group": "Quick Recipe"
+    }
+  ]
+}
