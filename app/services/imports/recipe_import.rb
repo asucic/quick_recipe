@@ -1,69 +1,84 @@
-module RecipeImport
-  @@authors = Hash.new
-  @@budgets = Hash.new
-  @@difficulties = Hash.new
-  @@tags = Hash.new
-  @@ingredients = Hash.new
+# frozen_string_literal: true
 
-  def self.authors
-    @@authors
-  end
+Dir[File.join(__dir__, 'extractors', '*.rb')].each { |file| require file }
+Dir[File.join(__dir__, 'loaders', '*.rb')].each { |file| require file }
 
-  def self.budgets
-    @@budgets
-  end
+module Services
+  module Imports
+    class RecipeImport
+      def initialize
+        @extractors = [
+          Exctractors::Recipe.new,
+          Exctractors::Ingredient.new,
+          Exctractors::Tag.new,
+        ]
 
-  def self.difficulties
-    @@difficulties
-  end
+        @loaders = [
+          Loaders::Author.new,
+          Loaders::Budget.new,
+          Loaders::Difficulty.new,
+          Loaders::Ingredient.new,
+          Loaders::Tag.new,
+          Loaders::Recipe.new,
+          Loaders::IngredientRecipe.new,
+          Loaders::RecipeTag.new,
+          Loaders::RecipeAuthorTip.new,
+          Loaders::RecipeImage.new,
+          Loaders::RecipeRate.new,
+        ]
+      end
 
-  def self.tags
-    @@tags
-  end
+      def load_recipe_tables
+        @loaders.each do |loader|
+          loader.load
+        end
+      end
 
-  def self.ingredients
-    @@ingredients
-  end
+      def bulk_import_recipe(lines)
+        database_cleanup
+        database_setup
 
-  def load_author(value)
-    value = value.titleize
-    key = value.parameterize.underscore.to_sym
-    @@authors.store(key, @@authors[key] || Author.new(name: value))
-  end
+        lines.with_index do |line, index|
+          insert_data if index % 100 == 99
+          parse_data(line, index)
+        end
 
-  def load_budget(value)
-    value = value.titleize
-    key = value.parameterize.underscore.to_sym
-    @@budgets.store(key, @@budgets[key] || Budget.new(name: value))
-  end
+        insert_data
+      end
 
-  def load_difficulty(value)
-    value = value.titleize
-    key = value.parameterize.underscore.to_sym
-    @@difficulties.store(key, @@difficulties[key] || Difficulty.new(name: value))
-  end
+      private
+        def parse_data(line, index)
+          @extractors.each do |extractor|
+            extractor.prepare(JSON.parse(line), index)
+          end
+        end
 
-  def load_tags(values)
-    tags = []
+        def insert_data
+          @extractors.each do |extractor|
+            run_insert_query(extractor)
+          end
+        end
 
-    values.each do |value|
-      value = value.titleize
-      key = value.parameterize.underscore.to_sym
-      tags << @@tags.store(key, @@tags[key] || Tag.new(name: value))
+        def run_insert_query(extractor)
+          query = extractor.get_insert_query % extractor.rows.join(",\n")
+          query = ActiveRecord::Base.send(:sanitize_sql_array, [query, extractor.values])
+          ActiveRecord::Base.connection.execute(query)
+
+          extractor.rows = []
+          extractor.values = {}
+        end
+
+        def database_cleanup
+          @extractors.each do |extractor|
+            ActiveRecord::Base.connection.execute(extractor.get_drop_query)
+          end
+        end
+
+        def database_setup
+          @extractors.each do |extractor|
+            ActiveRecord::Base.connection.execute(extractor.get_create_query)
+          end
+        end
     end
-
-    tags
-  end
-
-  def load_ingredients(values)
-    ingredients = []
-
-    values.each do |value|
-      value = value.titleize
-      key = value.parameterize.underscore.to_sym
-      ingredients << @@ingredients.store(key, @@ingredients[key] || Ingredient.new(name: value))
-    end
-
-    ingredients
   end
 end

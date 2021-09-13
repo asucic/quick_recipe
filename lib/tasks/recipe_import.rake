@@ -1,43 +1,46 @@
-require_relative "../../app/services/imports/recipe_import"
-include RecipeImport
+# frozen_string_literal: true
+
+require_relative '../../app/services/imports/recipe_import'
 
 namespace :db do
   desc 'Import recipes to database'
 
   task recipe_import: :environment do
-    import = RecipeImport
-    recipes = []
+    import = Services::Imports::RecipeImport.new
 
     puts 'Reading recipes'
     File.readlines('storage/recipes.json').each do |line|
-      values = JSON.parse(line)
-      values['author'] = import.load_author values['author']
-      values['budget'] = import.load_budget values['budget']
-      values['difficulty'] = import.load_difficulty values['difficulty']
-      values['ingredients'] = import.load_ingredients values['ingredients']
-      values['tags'] = import.load_tags values['tags']
-      recipes << Recipe.new(values)
+      import.parse_and_store(JSON.parse(line))
     end
 
-    puts 'Importing authors'
-    Author.import import.authors.values
+    puts "Importing #{import.relations['authors'].count} authors"
+    Author.import import.relations['authors'].values
 
-    puts 'Importing budgets'
-    Budget.import import.budgets.values
+    puts "Importing #{import.relations['budgets'].count} budgets"
+    Budget.import import.relations['budgets'].values
 
-    puts 'Importing difficulties'
-    Difficulty.import import.difficulties.values
+    puts "Importing #{import.relations['difficulties'].count} difficulties"
+    Difficulty.import import.relations['difficulties'].values
 
-    puts 'Importing ingredients'
-    Ingredient.import import.ingredients.values
+    puts "Importing #{import.relations['ingredients'].count} ingredients"
+    Ingredient.import import.relations['ingredients'].values
 
-    puts 'Importing tags'
-    Tag.import import.tags.values
+    puts "Importing #{import.relations['tags'].count} tags"
+    Tag.import import.relations['tags'].values
 
-    puts 'Importing recipes'
-    recipes.each do |recipe|
-      recipe.save
-    end
+    # Bulk insert with relations only works on PostgreSQL
+    # https://github.com/zdennis/activerecord-import
+    puts "Importing #{import.recipes.count} recipes"
+    import.recipes.each(&:save)
+
+    puts "Importing #{import.relations['author_tip'].count} author_tips"
+    import.relations['author_tip'].each(&:save)
+
+    puts "Importing #{import.relations['image'].count} images"
+    import.relations['image'].each(&:save)
+
+    puts "Importing #{import.relations['rate'].count} rates"
+    import.relations['rate'].each(&:save)
 
     puts 'Import completed!'
   end
