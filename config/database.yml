@@ -16,4 +16,4 @@ test:
 
 production:
   <<: *default
-  database: quick_recipe_production
+  database: <%= ENV.fetch("DATABASE_NAME_PRODUCTION") %>
