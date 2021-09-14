@@ -22,6 +22,8 @@ Setup development machine by running the following command:
 Add environment variables to your machine or .env file in the project root
 
 ```
+DATABASE_NAME_PRODUCTION=
+DATABASE_HOST=
 DATABASE_USERNAME=
 DATABASE_PASSWORD=
 ```
