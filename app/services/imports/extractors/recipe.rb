@@ -25,20 +25,20 @@ module Services
             "people_quantity_#{row}".to_sym => get_title(data['people_quantity']),
             "prep_time_#{row}".to_sym => get_title(data['prep_time']),
             "rate_#{row}".to_sym => get_title(data['rate']),
-            "total_time_#{row}".to_sym => get_title(data['total_time']),
+            "total_time_#{row}".to_sym => get_title(data['total_time'])
           }
 
-          @rows << "(:#{values.keys.join(", :")})"
+          @rows << "(:#{values.keys.join(', :')})"
           @values = @values.merge(values)
         end
 
-        def get_drop_query
+        def drop_query
           <<-SQL
             DROP TABLE IF EXISTS _import_recipe
           SQL
         end
 
-        def get_create_query
+        def create_query
           <<-SQL
             CREATE TABLE _import_recipe (
               recipe_id INT NOT NULL,
@@ -58,7 +58,7 @@ module Services
           SQL
         end
 
-        def get_insert_query
+        def insert_query
           <<-SQL
               INSERT INTO _import_recipe
               (
@@ -82,9 +82,10 @@ module Services
         end
 
         private
-          def get_title(value)
-            value.blank? ? nil : value.titleize
-          end
+
+        def get_title(value)
+          value.blank? ? nil : value.titleize
+        end
       end
     end
   end

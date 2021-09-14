@@ -1,7 +1,7 @@
 <div class="container">
   <div class="columns">
     <div class="column is-one-fifth">
-      <input class="input is-small" type="text" placeholder="Normal input">
+      <input id="ingredient-filter" class="input is-small" type="text" placeholder="Normal input">
     </div>
     <div class="column is-one-fifth">
       <div class="select is-primary is-multiple is-small">
@@ -13,5 +13,26 @@
 </div>
 
 <script>
-console.log("sdafgedg")
+(function() {
+  var httpRequest;
+  document.getElementById('ingredient-filter').addEventListener('click', filter_ingredients);
+  document.getElementById('ingredients').addEventListener('click', makeRequest);
+
+  function filter_ingredients() {
+    httpRequest = new XMLHttpRequest();
+    httpRequest.onreadystatechange = alertContents;
+    httpRequest.open('GET', 'test.html');
+    httpRequest.send();
+  }
+
+  function alertContents() {
+    if (httpRequest.readyState === XMLHttpRequest.DONE) {
+      if (httpRequest.status === 200) {
+        alert(httpRequest.responseText);
+      } else {
+        alert('There was a problem with the request.');
+      }
+    }
+  }
+})();
 </script>

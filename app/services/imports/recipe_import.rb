@@ -10,7 +10,7 @@ module Services
         @extractors = [
           Exctractors::Recipe.new,
           Exctractors::Ingredient.new,
-          Exctractors::Tag.new,
+          Exctractors::Tag.new
         ]
 
         @loaders = [
@@ -24,14 +24,12 @@ module Services
           Loaders::RecipeTag.new,
           Loaders::RecipeAuthorTip.new,
           Loaders::RecipeImage.new,
-          Loaders::RecipeRate.new,
+          Loaders::RecipeRate.new
         ]
       end
 
       def load_recipe_tables
-        @loaders.each do |loader|
-          loader.load
-        end
+        @loaders.each(&:load)
       end
 
       def bulk_import_recipe(lines)
@@ -47,38 +45,39 @@ module Services
       end
 
       private
-        def parse_data(line, index)
-          @extractors.each do |extractor|
-            extractor.prepare(JSON.parse(line), index)
-          end
-        end
 
-        def insert_data
-          @extractors.each do |extractor|
-            run_insert_query(extractor)
-          end
+      def parse_data(line, index)
+        @extractors.each do |extractor|
+          extractor.prepare(JSON.parse(line), index)
         end
+      end
 
-        def run_insert_query(extractor)
-          query = extractor.get_insert_query % extractor.rows.join(",\n")
-          query = ActiveRecord::Base.send(:sanitize_sql_array, [query, extractor.values])
-          ActiveRecord::Base.connection.execute(query)
-
-          extractor.rows = []
-          extractor.values = {}
+      def insert_data
+        @extractors.each do |extractor|
+          run_insert_query(extractor)
         end
+      end
 
-        def database_cleanup
-          @extractors.each do |extractor|
-            ActiveRecord::Base.connection.execute(extractor.get_drop_query)
-          end
-        end
+      def run_insert_query(extractor)
+        query = extractor.insert_query % extractor.rows.join(",\n")
+        query = ActiveRecord::Base.send(:sanitize_sql_array, [query, extractor.values])
+        ActiveRecord::Base.connection.execute(query)
 
-        def database_setup
-          @extractors.each do |extractor|
-            ActiveRecord::Base.connection.execute(extractor.get_create_query)
-          end
+        extractor.rows = []
+        extractor.values = {}
+      end
+
+      def database_cleanup
+        @extractors.each do |extractor|
+          ActiveRecord::Base.connection.execute(extractor.drop_query)
         end
+      end
+
+      def database_setup
+        @extractors.each do |extractor|
+          ActiveRecord::Base.connection.execute(extractor.create_query)
+        end
+      end
     end
   end
 end

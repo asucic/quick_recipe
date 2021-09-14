@@ -1,8 +1,6 @@
 # frozen_string_literal: true
 
 class Recipe < ApplicationRecord
-  paginates_per 2
-
   belongs_to :author
   belongs_to :budget
   belongs_to :difficulty
@@ -12,7 +10,7 @@ class Recipe < ApplicationRecord
   has_and_belongs_to_many :ingredients
   has_and_belongs_to_many :tags
 
-  def self.find_by_ingredients(ingredient_ids)
+  def self.find_by_ingredients(ingredient_ids, page, size)
     query = <<-SQL
       SELECT
         r.*,
@@ -31,10 +29,16 @@ class Recipe < ApplicationRecord
         r.id
       HAVING
         count_ai = count_i
+      LIMIT
+        :offset, :size
     SQL
 
-    connection.execute(
-      sanitize_sql_for_assignment([query, { ingredients: ingredient_ids }])
-    )
+    parameters = {
+      ingredients: ingredient_ids,
+      size: size,
+      offset: (page.to_i - 1) * size.to_i
+    }
+
+    find_by_sql(sanitize_sql_for_assignment([query, parameters]))
   end
 end
