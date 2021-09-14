@@ -1,14 +1,26 @@
 # frozen_string_literal: true
 
-require_relative '../../app/services/imports/recipe_import'
+module Tasks
+  class RecipeImport
+    include Rake::DSL
 
-namespace :db do
-  desc 'Import recipes to database'
+    RECIPES_FILEPATH = Rails.root.join('lib', 'tasks', 'recipes.json')
 
-  task recipe_import: :environment do
-    import = Services::Imports::RecipeImport.new
+    def initialize
+      namespace :recipe_import do
+        desc 'Imports recipes to database'
+        task run: :environment do
+          import = Imports::RecipeImport.new
 
-    import.bulk_import_recipe File.foreach('storage/recipes.json')
-    import.load_recipe_tables
+          puts 'Importing started...'
+          import.bulk_import_recipe File.foreach(RECIPES_FILEPATH)
+          import.load_recipe_tables
+
+          puts 'Finished'
+        end
+      end
+    end
   end
 end
+
+Tasks::RecipeImport.new

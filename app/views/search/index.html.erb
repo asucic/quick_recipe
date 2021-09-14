@@ -1,38 +1,213 @@
-<div class="container">
+<div class="container is-fluid">
+  <h1>Find recipes by choosing exact ingredients</h1>
   <div class="columns">
-    <div class="column is-one-fifth">
-      <input id="ingredient-filter" class="input is-small" type="text" placeholder="Normal input">
+    <div class="column is-one-thirds">
+      <input id="ingredient-filter" class="input is-small" type="text" placeholder="Filter ingredients by name">
+      <hr>
+      <div id="ingredient-pagination" class="columns is-centered" data-page="1">
+        <div class="column has-text-centered">
+          <button id="ingredient-pagination-previous" class="button is-rounded">< PREV</button>
+        </div>
+        <div class="column has-text-centered">
+          <button id="ingredient-pagination-next" class="button is-rounded">NEXT ></button>
+        </div>
+      </div>
+      <hr>
+      <div id="ingredients">
+      </div>
     </div>
-    <div class="column is-one-fifth">
+    <div class="column is-full">
       <div class="select is-primary is-multiple is-small">
-        <select id="ingredients">
-        </select>
+        <div id="picked-ingredients">
+        </div>
+        <hr>
+        <div id="recipe-pagination" class="columns is-centered" data-page="1">
+          <div class="column has-text-centered">
+            <button id="recipe-pagination-previous" class="button is-rounded">< PREV</button>
+          </div>
+          <div class="column has-text-centered">
+            <button id="recipe-pagination-next" class="button is-rounded">NEXT ></button>
+          </div>
+        </div>
+        <hr>
+        <div id="recipes">
+        </div>
       </div>
     </div>
   </div>
 </div>
 
 <script>
-(function() {
-  var httpRequest;
-  document.getElementById('ingredient-filter').addEventListener('click', filter_ingredients);
-  document.getElementById('ingredients').addEventListener('click', makeRequest);
 
-  function filter_ingredients() {
-    httpRequest = new XMLHttpRequest();
-    httpRequest.onreadystatechange = alertContents;
-    httpRequest.open('GET', 'test.html');
-    httpRequest.send();
+// Dear reader,
+// I am not a frontend developer, please ignore everything you are about to see in this script.
+// Or have a laugh, thank you.
+
+(function() {
+  var ingredientRequest, recipeRequest
+  var pickedIngredients = []
+
+  document.getElementById('ingredient-filter').addEventListener('keyup', load_ingredients);
+  document.getElementById('ingredient-pagination-next').addEventListener('click', ingredient_next_page);
+  document.getElementById('ingredient-pagination-previous').addEventListener('click', ingredient_previous_page);
+  document.getElementById('recipe-pagination-next').addEventListener('click', recipe_next_page);
+  document.getElementById('recipe-pagination-previous').addEventListener('click', recipe_previous_page);
+
+  function ingredient_next_page() {
+    let pagination = document.getElementById('ingredient-pagination')
+    pagination.setAttribute('data-page', parseInt(pagination.getAttribute('data-page')) + 1)
+
+    load_ingredients()
   }
 
-  function alertContents() {
-    if (httpRequest.readyState === XMLHttpRequest.DONE) {
-      if (httpRequest.status === 200) {
-        alert(httpRequest.responseText);
+  function ingredient_previous_page() {
+    let pagination = document.getElementById('ingredient-pagination')
+    pagination.setAttribute('data-page', parseInt(pagination.getAttribute('data-page')) - 1)
+
+    load_ingredients()
+  }
+
+  function recipe_next_page() {
+    let pagination = document.getElementById('recipe-pagination')
+    pagination.setAttribute('data-page', parseInt(pagination.getAttribute('data-page')) + 1)
+
+    load_recipes()
+  }
+
+  function recipe_previous_page() {
+    let pagination = document.getElementById('recipe-pagination')
+    pagination.setAttribute('data-page', parseInt(pagination.getAttribute('data-page')) - 1)
+
+    load_recipes()
+  }
+
+  function load_ingredients() {
+    ingredientRequest = new XMLHttpRequest();
+    ingredientRequest.onreadystatechange = displayIngredients;
+
+    let page = document.getElementById('ingredient-pagination').getAttribute('data-page')
+    let query = `page=${page}`
+    let filterIngredient = document.getElementById('ingredient-filter').value
+
+    if (filterIngredient && filterIngredient.length !== 0) {
+      query += `&filter[name]=${filterIngredient}`
+    }
+
+    ingredientRequest.open('GET', `/ingredients?${query}`)
+    ingredientRequest.send();
+  }
+
+  function addIngredient(event) {
+    let id = event.target.getAttribute("data-id")
+    let name = event.target.innerHTML
+
+    let picked = document.createElement('button');
+    picked.id = `picked_${id}`
+    picked.setAttribute('data-id', picked.id)
+    picked.innerHTML = name
+    picked.className += "button small is-rounded is-success"
+
+    document.getElementById('picked-ingredients').appendChild(picked)
+    pickedIngredients.push(picked.id)
+    load_recipes()
+
+    picked.addEventListener('click', function(event) {
+      pickedIngredients = pickedIngredients.filter(item => item !== event.target.getAttribute('data-id'))
+      event.target.remove()
+      load_recipes()
+    });
+  }
+
+  function displayIngredients() {
+    if (ingredientRequest.readyState === XMLHttpRequest.DONE) {
+      if (ingredientRequest.status === 200) {
+        document.getElementById('ingredients').innerHTML = ''
+        for (let ingredient of JSON.parse(ingredientRequest.response)) {
+          document.getElementById('ingredients').innerHTML += `
+            <button data-id="${ingredient.id}" class="ingredient-button button small is-rounded">${ingredient.name}</button>
+          `
+        }
+
+        Array.from(document.getElementsByClassName('ingredient-button')).forEach(function(element) {
+          element.addEventListener('click', addIngredient.bind(element));
+        });
       } else {
-        alert('There was a problem with the request.');
+        alert('ERROR: Could not load ingredients');
       }
     }
   }
+
+  function load_recipes() {
+    recipeRequest = new XMLHttpRequest();
+    recipeRequest.onreadystatechange = displayRecipes;
+
+    let page = document.getElementById('recipe-pagination').getAttribute('data-page')
+    let query = `page=${page}`
+
+    if (pickedIngredients.length > 0) {
+      query += `&filter[ingredients]=${pickedIngredients.join(',')}`
+    }
+
+    recipeRequest.open('GET', `/recipes?${query}`)
+    recipeRequest.send();
+  }
+
+  function displayRecipes() {
+    if (recipeRequest.readyState === XMLHttpRequest.DONE) {
+      if (recipeRequest.status === 200) {
+        document.getElementById('recipes').innerHTML = ''
+        for (let recipe of JSON.parse(recipeRequest.response)) {
+
+          ingredients = ''
+          for (let ingredient of recipe.ingredients) {
+            ingredients += `<p style="border: 1px solid green">${ingredient.name}</p>`
+          }
+
+          tags = ''
+          for (let tag of recipe.tags) {
+            tags += `<p style="border: 1px solid black">${tag.name}</p>`
+          }
+
+          document.getElementById('recipes').innerHTML += `
+            <article class="media">
+              <figure class="media-left">
+                <p class="image is-64x64">
+                  <img src="${recipe.image}">
+                </p>
+              </figure>
+              <div class="media-content">
+                <p><strong>${recipe.name}</strong></p>
+                <p>For ${recipe.people_quantity} people</p>
+                <br>
+                <div class="columns">
+                  <div class="column">
+                    <p>Author: ${recipe.author.name}</p>
+                    <p>Budget: ${recipe.budget.name}</p>
+                    <p>Difficulty: ${recipe.difficulty.name}</p>
+                  </div>
+                  <div class="column">
+                    <p>Preparation: ${recipe.prep_time}</p>
+                    <p>Cooking: ${recipe.cook_time}</p>
+                    <p>Total time: ${recipe.total_time}</p>
+                  </div>
+                  <div class="column">
+                    ${ingredients}
+                  </div>
+                  <div class="column">
+                    ${tags}
+                  </div>
+                </div>
+              </div>
+            </article>
+          `
+        }
+      } else {
+        alert('ERROR: Could not load recipes');
+      }
+    }
+  }
+
+  load_ingredients()
+  load_recipes()
 })();
 </script>

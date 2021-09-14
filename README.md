@@ -1,24 +1,38 @@
-# README
+# QUICK RECIPE
 
-This README would normally document whatever steps are necessary to get the
-application up and running.
+## Problem statement
 
-Things you may want to cover:
+> **I am expecting friends for dinner. Knowing what I have in my fridge, what dishes can I cook?**
 
-* Ruby version
+## Built With
 
-* System dependencies
+* Ruby 3.0.1
+* Rails 6.1.4.1
 
-* Configuration
+## Installation
 
-* Database creation
+Clone the project
 
-* Database initialization
+`git clone git@github.com:asucic/quick_recipe.git`
 
-* How to run the test suite
+Setup development machine by running the following command:
 
-* Services (job queues, cache servers, search engines, etc.)
+`bin/setup`
 
-* Deployment instructions
+Add environment variables to your machine or .env file in the project root
 
-* ...
+```
+DATABASE_USERNAME=
+DATABASE_PASSWORD=
+```
+
+## Usage
+
+To find what you can cook for dinner with contents of your fridge, on the home page of this site you can filter and select ingredients and if there is a recipe with given ingredients it will be shown to you.
+
+## Roadmap
+
+- Update frontend pagination
+- Update frontend styling
+- Test coverage
+

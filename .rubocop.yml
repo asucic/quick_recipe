@@ -4,3 +4,6 @@ AllCops:
     - 'config/**/*'
     - 'db/**/*'
     - 'bin/**/*'
+
+Documentation:
+  Enabled: false

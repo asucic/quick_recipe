@@ -1,82 +1,82 @@
 # frozen_string_literal: true
 
-Dir[File.join(__dir__, 'extractors', '*.rb')].each { |file| require file }
-Dir[File.join(__dir__, 'loaders', '*.rb')].each { |file| require file }
+module Imports
+  class RecipeImport
+    EXTRACTORS = [
+      Imports::Extractors::Recipe.new,
+      Imports::Extractors::Ingredient.new,
+      Imports::Extractors::Tag.new
+    ].freeze
 
-module Services
-  module Imports
-    class RecipeImport
-      def initialize
-        @extractors = [
-          Exctractors::Recipe.new,
-          Exctractors::Ingredient.new,
-          Exctractors::Tag.new
-        ]
+    LOADERS = [
+      Imports::Loaders::Author.new,
+      Imports::Loaders::Budget.new,
+      Imports::Loaders::Difficulty.new,
+      Imports::Loaders::Ingredient.new,
+      Imports::Loaders::Tag.new,
+      Imports::Loaders::Recipe.new,
+      Imports::Loaders::IngredientRecipe.new,
+      Imports::Loaders::RecipeTag.new,
+      Imports::Loaders::RecipeAuthorTip.new,
+      Imports::Loaders::RecipeImage.new,
+      Imports::Loaders::RecipeRate.new
+    ].freeze
 
-        @loaders = [
-          Loaders::Author.new,
-          Loaders::Budget.new,
-          Loaders::Difficulty.new,
-          Loaders::Ingredient.new,
-          Loaders::Tag.new,
-          Loaders::Recipe.new,
-          Loaders::IngredientRecipe.new,
-          Loaders::RecipeTag.new,
-          Loaders::RecipeAuthorTip.new,
-          Loaders::RecipeImage.new,
-          Loaders::RecipeRate.new
-        ]
+    def initialize
+      @extractors = EXTRACTORS
+      @loaders = LOADERS
+    end
+
+    def load_recipe_tables
+      loaders.each(&:load)
+    end
+
+    def bulk_import_recipe(lines)
+      database_cleanup
+      database_setup
+
+      lines.with_index do |line, index|
+        insert_data if index % 100 == 99
+        parse_data(line, index)
       end
 
-      def load_recipe_tables
-        @loaders.each(&:load)
+      insert_data
+    end
+
+    private
+
+    attr_reader :extractors, :loaders
+
+    def parse_data(line, index)
+      extractors.each do |extractor|
+        extractor.prepare(JSON.parse(line), index)
       end
+    end
 
-      def bulk_import_recipe(lines)
-        database_cleanup
-        database_setup
-
-        lines.with_index do |line, index|
-          insert_data if index % 100 == 99
-          parse_data(line, index)
-        end
-
-        insert_data
+    def insert_data
+      extractors.each do |extractor|
+        run_insert_query(extractor)
       end
+    end
 
-      private
+    def run_insert_query(extractor)
+      query = extractor.insert_query % extractor.rows.join(",\n")
+      query = ActiveRecord::Base.send(:sanitize_sql_array, [query, extractor.values])
+      ActiveRecord::Base.connection.execute(query)
 
-      def parse_data(line, index)
-        @extractors.each do |extractor|
-          extractor.prepare(JSON.parse(line), index)
-        end
+      extractor.rows = []
+      extractor.values = {}
+    end
+
+    def database_cleanup
+      extractors.each do |extractor|
+        ActiveRecord::Base.connection.execute(extractor.drop_query)
       end
+    end
 
-      def insert_data
-        @extractors.each do |extractor|
-          run_insert_query(extractor)
-        end
-      end
-
-      def run_insert_query(extractor)
-        query = extractor.insert_query % extractor.rows.join(",\n")
-        query = ActiveRecord::Base.send(:sanitize_sql_array, [query, extractor.values])
-        ActiveRecord::Base.connection.execute(query)
-
-        extractor.rows = []
-        extractor.values = {}
-      end
-
-      def database_cleanup
-        @extractors.each do |extractor|
-          ActiveRecord::Base.connection.execute(extractor.drop_query)
-        end
-      end
-
-      def database_setup
-        @extractors.each do |extractor|
-          ActiveRecord::Base.connection.execute(extractor.create_query)
-        end
+    def database_setup
+      extractors.each do |extractor|
+        ActiveRecord::Base.connection.execute(extractor.create_query)
       end
     end
   end
