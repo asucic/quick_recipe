@@ -28,7 +28,7 @@ DATABASE_PASSWORD=
 
 ## Usage
 
-To find what you can cook for dinner with contents of your fridge, on the home page of this site you can filter and select ingredients and if there is a recipe with given ingredients it will be shown to you.
+To find what you can cook for dinner with contents of your fridge, on the home page of this site you can filter and select ingredients and if there is a recipe with given ingredients it will be shown to you. You can find demo application deployed on [Heroku](https://asucic-quick-recipe.herokuapp.com/)
 
 ## Roadmap
 
